@@ -364,7 +364,7 @@
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
     try {
-      const res = await fetch('http://localhost:8080/api/auth/login', {
+      const res = await fetch('https://seshu-news-backend.onrender.com/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -373,7 +373,7 @@
         const data = await res.json();
         localStorage.setItem('token', data.token);
         localStorage.setItem('username', data.username || email.split('@')[0]);
-        const prefRes = await fetch('http://localhost:8080/api/user/preferences', {
+        const prefRes = await fetch('https://seshu-news-backend.onrender.com/api/user/preferences', {
           headers: { 'Authorization': `Bearer ${data.token}` }
         });
         if (prefRes.ok) {
@@ -436,7 +436,7 @@
     const password = document.getElementById('register-password').value;
     const preferredCategory = document.getElementById('register-category').value;
     try {
-      const res = await fetch('http://localhost:8080/api/auth/register', {
+      const res = await fetch('https://seshu-news-backend.onrender.com/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password, preferredCategory })
@@ -482,7 +482,7 @@
     console.log(`Fetching news: category=${category}, query=${query}, page=${page}`);
     let url = `https://seshu-news-backend.onrender.com/api/news/top-headlines?country=us&category=${category}&pageSize=20&page=${page}`;
     if (query) {
-      url = `http://localhost:8080/api/news/everything?q=${encodeURIComponent(query)}&pageSize=20&page=${page}`;
+      url = `https://seshu-news-backend.onrender.com/api/news/everything?q=${encodeURIComponent(query)}&pageSize=20&page=${page}`;
     }
     try {
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -525,7 +525,7 @@
       let bookmarkedUrls = new Set();
       if (localStorage.getItem('token')) {
         try {
-          const bookmarksRes = await fetch('http://localhost:8080/api/bookmarks', {
+          const bookmarksRes = await fetch('https://seshu-news-backend.onrender.com/api/bookmarks', {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           });
           if (bookmarksRes.ok) {
@@ -616,7 +616,7 @@
 
   async function fetchTrending() {
     console.log("Fetching trending news...");
-    const url = `http://localhost:8080/api/news?country=us&pageSize=5`;
+    const url = `https://seshu-news-backend.onrender.com/api/news?country=us&pageSize=5`;
     try {
       const res = await fetch(url);
       if (!res.ok) {
@@ -670,7 +670,7 @@
     const isBookmarked = icon.classList.contains('bookmarked');
     try {
       if (isBookmarked) {
-        const res = await fetch(`http://localhost:8080/api/bookmarks?url=${encodeURIComponent(normalizedUrl)}`, {
+        const res = await fetch(`https://seshu-news-backend.onrender.com/api/bookmarks?url=${encodeURIComponent(normalizedUrl)}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -691,7 +691,7 @@
           showToast(errorMessage, true);
         }
       } else {
-        const res = await fetch('http://localhost:8080/api/bookmarks', {
+        const res = await fetch('https://seshu-news-backend.onrender.com/api/bookmarks', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -742,7 +742,7 @@
     }
 
     try {
-      const res = await fetch('http://localhost:8080/api/bookmarks', {
+      const res = await fetch('https://seshu-news-backend.onrender.com/api/bookmarks', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
