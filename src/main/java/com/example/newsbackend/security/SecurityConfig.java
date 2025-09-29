@@ -4,13 +4,15 @@ import com.example.newsbackend.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
@@ -46,8 +48,8 @@ public class SecurityConfig {
                     "default-src 'self'; " +
                     "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; " +
                     "script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net 'sha256-ePFSEiLfRnzy2snYAsHCg4GkRm9/wfsaiuiiJQpzaBw='; " +
-                    "font-src 'self' https://fonts.gstatic.com; " +
-                    "connect-src 'self' https://seshu-news-backend.onrender.com; " +
+                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+                    "connect-src 'self' https://seshu-news-backend.onrender.com https://cdn.jsdelivr.net; " +
                     "img-src 'self' https://placehold.co data:;"
                 ))
             );
@@ -62,6 +64,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // CORS configuration for Spring Security
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -78,5 +81,24 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    // Additional Web MVC CORS mapping (extra safety for non-Spring Security endpoints)
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins(
+                            "http://localhost:3000",
+                            "http://localhost:5500",
+                            "https://seshu-eazybyts-module3.onrender.com"
+                        )
+                        .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
+            }
+        };
     }
 }
