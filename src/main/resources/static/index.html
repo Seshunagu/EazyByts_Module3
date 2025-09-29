@@ -480,7 +480,7 @@
 
   async function fetchNews(category = "general", query = "", page = 1, append = false) {
     console.log(`Fetching news: category=${category}, query=${query}, page=${page}`);
-    let url = `http://localhost:8080/api/news/top-headlines?country=us&category=${category}&pageSize=20&page=${page}`;
+    let url = `https://seshu-news-backend.onrender.com/api/news/top-headlines?country=us&category=${category}&pageSize=20&page=${page}`;
     if (query) {
       url = `http://localhost:8080/api/news/everything?q=${encodeURIComponent(query)}&pageSize=20&page=${page}`;
     }
