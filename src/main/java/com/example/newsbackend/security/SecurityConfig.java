@@ -33,7 +33,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Explicitly set CORS configuration
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
@@ -42,7 +42,14 @@ public class SecurityConfig {
             )
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
-                .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self';"))
+                .contentSecurityPolicy(csp -> csp.policyDirectives(
+                    "default-src 'self'; " +
+                    "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; " +
+                    "script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net 'sha256-ePFSEiLfRnzy2snYAsHCg4GkRm9/wfsaiuiiJQpzaBw='; " +
+                    "font-src 'self' https://fonts.gstatic.com; " +
+                    "connect-src 'self' https://seshu-news-backend.onrender.com; " +
+                    "img-src 'self' https://placehold.co data:;"
+                ))
             );
 
         http.addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
@@ -66,7 +73,7 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-        config.setMaxAge(3600L); // Cache preflight requests for 1 hour
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
