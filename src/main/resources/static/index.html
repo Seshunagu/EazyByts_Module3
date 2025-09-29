@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live News Portal</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter Font -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --primary: #0077cc;
+      --text: #222;
+      --muted: #555;
+      --bg: #f5f6f7;
+      --card: #fff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); }
+    header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.5rem; }
+    nav a, .dropdown-item {
+      color: white;
+      text-decoration: none;
+      margin-left: 15px;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    nav a:hover, .dropdown-item:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+    .dropdown-menu { background: var(--primary); }
+    .dropdown-item { color: white; }
+    .layout { display: grid; grid-template-columns: 3fr 1fr; gap: 20px; padding: 20px; }
+    .news-feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .news-card { background: var(--card); border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+    .news-card img { width: 100%; height: 160px; object-fit: cover; }
+    .news-card .content { padding: 12px; flex: 1; display: flex; flex-direction: column; }
+    .news-card h3 { font-size: 18px; margin-bottom: 8px; }
+    .news-card p { font-size: 14px; color: var(--muted); flex: 1; }
+    .news-card a { margin-top: 8px; text-decoration: none; color: var(--primary); font-weight: bold; font-size: 14px; }
+    .news-card .bookmark-icon { cursor: pointer; margin-left: 10px; color: var(--muted); font-size: 14px; }
+    .news-card .bookmark-icon:hover { color: var(--primary); }
+    .news-card .bookmark-icon.bookmarked { color: gold; }
+    .sidebar { background: var(--card); padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); height: fit-content; }
+    .sidebar h2 { font-size: 1.2rem; margin-bottom: 10px; }
+    .sidebar .trending-item { margin-bottom: 10px; }
+    .sidebar .trending-item a { font-size: 14px; }
+    footer { text-align: center; padding: 15px; background: #e9ecef; color: var(--muted); margin-top: 30px; }
+    #welcomeMessage { color: white; margin-left: 15px; }
+    .modal-content { background: #1e293b; border: 1px solid #475569; border-radius: 1.5rem; font-family: 'Inter', sans-serif; }
+    .modal-dialog { max-width: 400px; }
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .news-card img { height: 120px; }
+      .modal-dialog { max-width: 90%; }
+    }
+    .search-container { margin-left: 20px; margin-right: 20px; flex-grow: 1; max-width: 300px; }
+    .search-container input { 
+      width: 100%; 
+      padding: 8px 12px; 
+      border-radius: 4px; 
+      border: none; 
+      background: rgba(255, 255, 255, 0.1); 
+      color: white; 
+      transition: background-color 0.3s; 
+    }
+    .search-container input::placeholder { color: rgba(255, 255, 255, 0.7); }
+    .search-container input:focus { 
+      outline: none; 
+      background: rgba(255, 255, 255, 0.2); 
+    }
+    .load-more-container { text-align: center; margin-top: 20px; }
+    .load-more-btn { 
+      background: var(--primary); 
+      color: white; 
+      padding: 10px 20px; 
+      border-radius: 4px; 
+      border: none; 
+      font-weight: bold; 
+      cursor: pointer; 
+      transition: background-color 0.3s; 
+    }
+    .load-more-btn:hover { background: #005fa3; }
+    .load-more-btn:disabled { background: #ccc; cursor: not-allowed; }
+    #toast {
+      z-index: 1000;
+      max-width: 300px;
+    }
+    #toast.success {
+      background: #10b981;
+    }
+    #toast.error {
+      background: #ef4444;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Live News Portal</h1>
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search news...">
+  </div>
+  <nav class="d-flex align-items-center">
+    <a href="#" id="homeLink">Home</a>
+    <div class="dropdown">
+      <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Categories</a>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('general')">General</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('technology')">Technology</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('business')">Business</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('sports')">Sports</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('health')">Health</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('entertainment')">Entertainment</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('science')">Science</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('politics')">Politics</a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadCategory('world')">World</a></li>
+      </ul>
+    </div>
+    <a href="#" id="bookmarksLink">Bookmarks</a>
+    <a href="#" id="authLink" data-bs-toggle="modal" data-bs-target="#authModal">Login</a>
+    <span id="welcomeMessage"></span>
+  </nav>
+</header>
+
+<main class="layout">
+  <div class="left-section">
+    <section class="news-feed" id="news-feed"></section>
+    <div class="load-more-container" id="loadMoreContainer">
+      <button class="load-more-btn" id="loadMoreBtn">Load More</button>
+    </div>
+  </div>
+  
+  <aside class="sidebar">
+    <h2>Trending News</h2>
+    <div id="trending-feed"></div>
+  </aside>
+</main>
+
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body p-6 md:p-8">
+        <div class="text-center mb-6">
+          <h1 id="auth-title" class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">Log In</h1>
+        </div>
+        
+        <div id="success-message" class="hidden p-3 mb-3 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-200 dark:text-green-800" role="alert">
+          <span class="font-bold">Success!</span> <span id="success-text">Login successful.</span>
+        </div>
+
+        <form id="login-form" novalidate>
+          <div class="mb-3">
+            <div class="relative">
+              <input type="email" id="login-email" placeholder="Email" class="w-full pl-10 pr-4 py-2 bg-slate-700 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-white" required>
+              <i class="fas fa-envelope text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+            </div>
+            <div class="text-red-400 text-xs mt-1 hidden" id="login-email-error">Please enter a valid email.</div>
+          </div>
+          <div class="mb-4">
+            <div class="relative">
+              <input type="password" id="login-password" placeholder="Password" class="w-full pl-10 pr-4 py-2 bg-slate-700 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-white" required>
+              <i class="fas fa-lock text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+            </div>
+            <div class="text-red-400 text-xs mt-1 hidden" id="login-password-error">Password is required.</div>
+          </div>
+          <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-teal-400 text-white font-bold py-2 rounded-xl hover:from-blue-600 hover:to-teal-500 transition-all duration-300 transform hover:scale-105 shadow-md">
+            Log In
+          </button>
+        </form>
+
+        <form id="register-form" class="hidden" novalidate>
+          <div class="mb-3">
+            <div class="relative">
+              <input type="text" id="register-username" placeholder="Username" class="w-full pl-10 pr-4 py-2 bg-slate-700 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-white" required>
+              <i class="fas fa-user text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+            </div>
+            <div class="text-red-400 text-xs mt-1 hidden" id="register-username-error">Username is required.</div>
+          </div>
+          <div class="mb-3">
+            <div class="relative">
+              <input type="email" id="register-email" placeholder="Email" class="w-full pl-10 pr-4 py-2 bg-slate-700 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-white" required>
+              <i class="fas fa-envelope text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+            </div>
+            <div class="text-red-400 text-xs mt-1 hidden" id="register-email-error">Please enter a valid email.</div>
+          </div>
+          <div class="mb-3">
+            <div class="relative">
+              <input type="password" id="register-password" placeholder="Password" class="w-full pl-10 pr-4 py-2 bg-slate-700 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-white" required minlength="6">
+              <i class="fas fa-lock text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+            </div>
+            <div class="text-red-400 text-xs mt-1 hidden" id="register-password-error">Password must be at least 6 characters.</div>
+          </div>
+          <div class="mb-3">
+            <div class="relative">
+              <select id="register-category" class="w-full pl-10 pr-4 py-2 bg-slate-700 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-white" required>
+                <option value="" disabled selected>Select preferred news category</option>
+                <option value="general">General</option>
+                <option value="technology">Technology</option>
+                <option value="business">Business</option>
+                <option value="sports">Sports</option>
+                <option value="health">Health</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="science">Science</option>
+                <option value="politics">Politics</option>
+                <option value="world">World</option>
+              </select>
+              <i class="fas fa-newspaper text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+            </div>
+            <div class="text-red-400 text-xs mt-1 hidden" id="register-category-error">Please select a category.</div>
+          </div>
+          <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-teal-400 text-white font-bold py-2 rounded-xl hover:from-blue-600 hover:to-teal-500 transition-all duration-300 transform hover:scale-105 shadow-md">
+            Register
+          </button>
+        </form>
+
+        <p class="text-center mt-4 text-xs text-slate-400">
+          <span id="toggle-auth" class="text-blue-400 hover:text-blue-300 cursor-pointer font-medium transition-colors">
+            Don't have an account? Register
+          </span>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bookmarkPromptModal" tabindex="-1" aria-labelledby="bookmarkPromptModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body p-6 md:p-8 text-center">
+        <h2 class="text-xl font-bold text-white mb-4">Login Required</h2>
+        <p class="text-slate-400 mb-6">You need to be logged in to bookmark articles.</p>
+        <div class="flex justify-center gap-4">
+          <button id="cancelBookmarkBtn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-gray-600 transition-all duration-300">
+            Cancel
+          </button>
+          <button id="loginBookmarkBtn" class="bg-gradient-to-r from-blue-500 to-teal-400 text-white font-bold py-2 px-4 rounded-xl hover:from-blue-600 hover:to-teal-500 transition-all duration-300">
+            Login
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-5 right-5 hidden p-4 rounded-lg shadow-lg text-white transition-opacity duration-300">
+  <span id="toast-message"></span>
+</div>
+
+<footer>© 2025 Live News Portal — All Rights Reserved</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const newsFeed = document.getElementById("news-feed");
+  const trendingFeed = document.getElementById("trending-feed");
+  const authLink = document.getElementById("authLink");
+  const welcomeMessage = document.getElementById("welcomeMessage");
+  const searchInput = document.getElementById("searchInput");
+  const loadMoreBtn = document.getElementById("loadMoreBtn");
+  const loadMoreContainer = document.getElementById("loadMoreContainer");
+  const bookmarksLink = document.getElementById("bookmarksLink");
+  const homeLink = document.getElementById("homeLink");
+
+  // Auth form elements
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const authTitle = document.getElementById('auth-title');
+  const toggleAuthLink = document.getElementById('toggle-auth');
+  const successMessage = document.getElementById('success-message');
+  const successText = document.getElementById('success-text');
+
+  // Bookmark modal elements
+  const bookmarkPromptModal = document.getElementById('bookmarkPromptModal');
+  const cancelBookmarkBtn = document.getElementById('cancelBookmarkBtn');
+  const loginBookmarkBtn = document.getElementById('loginBookmarkBtn');
+
+  // Pagination and uniqueness tracking
+  let currentPage = 1;
+  let currentCategory = localStorage.getItem('preferredCategory') || 'general';
+  let currentQuery = '';
+  let isBookmarksView = false;
+  const allArticleUrls = new Set(); // Global set to track all article URLs
+
+  // Check for logged-in user
+  const user = localStorage.getItem("username");
+  if (user) {
+    authLink.textContent = "Logout";
+    authLink.removeAttribute("data-bs-toggle");
+    authLink.removeAttribute("data-bs-target");
+    authLink.href = "#";
+    authLink.onclick = () => {
+      localStorage.removeItem("username");
+      localStorage.removeItem("token");
+      localStorage.removeItem("preferredCategory");
+      location.reload();
+    };
+    welcomeMessage.textContent = `Welcome, ${user}!`;
+  }
+
+  // Toast notification function
+  function showToast(message, isError = false) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    toastMessage.textContent = message;
+    toast.classList.remove('hidden', 'success', 'error');
+    toast.classList.add(isError ? 'error' : 'success');
+    setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 3000);
+  }
+
+  // Toggle between login and registration forms
+  function toggleForms() {
+    if (loginForm.classList.contains('hidden')) {
+      loginForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+      authTitle.textContent = 'Log In';
+      toggleAuthLink.textContent = "Don't have an account? Register";
+    } else {
+      loginForm.classList.add('hidden');
+      registerForm.classList.remove('hidden');
+      authTitle.textContent = 'Register';
+      toggleAuthLink.textContent = "Already have an account? Log In";
+    }
+  }
+  toggleAuthLink.addEventListener('click', toggleForms);
+
+  // Form validation function
+  function validateForm(form, inputs) {
+    let valid = true;
+    inputs.forEach(({ id, errorId, validate }) => {
+      const input = document.getElementById(id);
+      const error = document.getElementById(errorId);
+      if (!validate(input.value)) {
+        input.classList.add('border-red-500');
+        error.classList.remove('hidden');
+        valid = false;
+      } else {
+        input.classList.remove('border-red-500');
+        error.classList.add('hidden');
+      }
+    });
+    return valid;
+  }
+
+  // Handle login form submission
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inputs = [
+      { id: 'login-email', errorId: 'login-email-error', validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+      { id: 'login-password', errorId: 'login-password-error', validate: v => v.length > 0 }
+    ];
+    if (!validateForm(loginForm, inputs)) return;
+
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    try {
+      const res = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.username || email.split('@')[0]);
+        const prefRes = await fetch('http://localhost:8080/api/user/preferences', {
+          headers: { 'Authorization': `Bearer ${data.token}` }
+        });
+        if (prefRes.ok) {
+          const prefData = await prefRes.json();
+          localStorage.setItem('preferredCategory', prefData.preferredCategory || 'general');
+        }
+        successText.textContent = 'Login successful.';
+        successMessage.classList.remove('hidden');
+        setTimeout(() => {
+          successMessage.classList.add('hidden');
+          bootstrap.Modal.getInstance(document.getElementById('authModal')).hide();
+          welcomeMessage.textContent = `Welcome, ${localStorage.getItem('username')}!`;
+          authLink.textContent = "Logout";
+          authLink.removeAttribute("data-bs-toggle");
+          authLink.removeAttribute("data-bs-target");
+          authLink.href = "#";
+          authLink.onclick = () => {
+            localStorage.removeItem("username");
+            localStorage.removeItem("token");
+            localStorage.removeItem("preferredCategory");
+            location.reload();
+          };
+          currentPage = 1;
+          currentCategory = localStorage.getItem('preferredCategory') || 'general';
+          currentQuery = '';
+          isBookmarksView = false;
+          allArticleUrls.clear();
+          fetchNews(currentCategory);
+        }, 2000);
+      } else {
+        const errorData = await res.text(); // Use text() to handle non-JSON responses
+        let errorMessage = 'Login failed. Please check your credentials.';
+        try {
+          const jsonError = JSON.parse(errorData);
+          errorMessage = jsonError.message || errorMessage;
+        } catch (jsonErr) {
+          console.error('Failed to parse login error response:', jsonErr);
+        }
+        showToast(errorMessage, true);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      showToast('Error connecting to server.', true);
+    }
+  });
+
+  // Handle registration form submission
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inputs = [
+      { id: 'register-username', errorId: 'register-username-error', validate: v => v.length > 0 },
+      { id: 'register-email', errorId: 'register-email-error', validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+      { id: 'register-password', errorId: 'register-password-error', validate: v => v.length >= 6 },
+      { id: 'register-category', errorId: 'register-category-error', validate: v => v.length > 0 }
+    ];
+    if (!validateForm(registerForm, inputs)) return;
+
+    const username = document.getElementById('register-username').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const preferredCategory = document.getElementById('register-category').value;
+    try {
+      const res = await fetch('http://localhost:8080/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password, preferredCategory })
+      });
+      if (res.ok) {
+        successText.textContent = 'Registration successful. Please log in.';
+        successMessage.classList.remove('hidden');
+        setTimeout(() => {
+          successMessage.classList.add('hidden');
+          toggleForms(); // Switch to login form
+          document.getElementById('login-email').value = email; // Pre-fill email
+        }, 2000);
+      } else {
+        const errorData = await res.text();
+        let errorMessage = 'Registration failed. Try a different email/username.';
+        try {
+          const jsonError = JSON.parse(errorData);
+          errorMessage = jsonError.message || errorMessage;
+        } catch (jsonErr) {
+          console.error('Failed to parse registration error response:', jsonErr);
+        }
+        showToast(errorMessage, true);
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      showToast('Error connecting to server.', true);
+    }
+  });
+
+  // Sanitize string for safe HTML rendering
+  function sanitizeString(str) {
+    if (!str) return '';
+    return str.replace(/[<>"';&]/g, (match) => ({
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '&': '&amp;'
+    })[match]);
+  }
+
+  async function fetchNews(category = "general", query = "", page = 1, append = false) {
+    console.log(`Fetching news: category=${category}, query=${query}, page=${page}`);
+    let url = `http://localhost:8080/api/news/top-headlines?country=us&category=${category}&pageSize=20&page=${page}`;
+    if (query) {
+      url = `http://localhost:8080/api/news/everything?q=${encodeURIComponent(query)}&pageSize=20&page=${page}`;
+    }
+    try {
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) {
+        let errorMessage = 'Failed to fetch news. Please try again later.';
+        if (res.status === 403) {
+          errorMessage = 'Access denied. Ensure backend server is running and CORS is configured correctly.';
+        } else if (res.status === 429) {
+          errorMessage = 'Rate limit exceeded. Retrying in 60 seconds...';
+          loadMoreBtn.disabled = true;
+          setTimeout(() => {
+            loadMoreBtn.disabled = false;
+            fetchNews(category, query, page, append);
+          }, 60000);
+        } else if (res.status === 500) {
+          errorMessage = 'Server error. Check backend logs for details.';
+        }
+        try {
+          const errorData = await res.text();
+          let jsonError;
+          try {
+            jsonError = JSON.parse(errorData);
+            errorMessage += ` ${jsonError.message || ''}`;
+          } catch (jsonErr) {
+            console.error('Failed to parse news error response:', jsonErr);
+          }
+          console.error(`News fetch error response: ${errorData}`);
+        } catch (jsonErr) {
+          console.error('Failed to parse news error response:', jsonErr);
+        }
+        newsFeed.innerHTML = `<p style="color:red;">${errorMessage}</p>`;
+        loadMoreContainer.style.display = 'none';
+        showToast(errorMessage, true);
+        throw new Error(`HTTP ${res.status}: ${errorMessage}`);
+      }
+      const data = await res.json();
+      console.log(`API response: status=${data.status}, articles=${data.articles ? data.articles.length : 0}, totalResults=${data.totalResults || 'N/A'}, unique URLs=${allArticleUrls.size}`);
+
+      // Fetch bookmarked URLs if user is logged in
+      let bookmarkedUrls = new Set();
+      if (localStorage.getItem('token')) {
+        try {
+          const bookmarksRes = await fetch('http://localhost:8080/api/bookmarks', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (bookmarksRes.ok) {
+            const response = await bookmarksRes.json();
+            const bookmarks = response.bookmarks || [];
+            console.log('Bookmarks response:', bookmarks);
+            bookmarkedUrls = new Set(bookmarks.map(b => b.url?.toLowerCase()).filter(url => url));
+          } else {
+            const errorData = await bookmarksRes.text();
+            let errorMessage = 'Failed to fetch bookmarks.';
+            try {
+              const jsonError = JSON.parse(errorData);
+              errorMessage = jsonError.message || errorMessage;
+            } catch (jsonErr) {
+              console.error('Failed to parse bookmarks error response:', jsonErr);
+            }
+            console.warn('Failed to fetch bookmarks:', bookmarksRes.status, errorData);
+            showToast(errorMessage, true);
+          }
+        } catch (bmErr) {
+          console.error('Bookmark fetch error:', bmErr);
+          showToast('Error fetching bookmarks.', true);
+        }
+      } else {
+        console.log('No token found, skipping bookmarks fetch.');
+      }
+
+      if (data.status === "ok") {
+        if (!data.articles || data.articles.length === 0) {
+          if (page === 1) {
+            newsFeed.innerHTML = `<p style="color:gray;">No articles available for this category. Try <a href="#" onclick="loadCategory('general')">General</a> instead.</p>`;
+            loadMoreContainer.style.display = 'none';
+          } else {
+            newsFeed.innerHTML += `<p style="color:gray;">No more articles available.</p>`;
+            loadMoreContainer.style.display = 'none';
+          }
+          return;
+        }
+        if (!append) {
+          newsFeed.innerHTML = "";
+          allArticleUrls.clear();
+        }
+        data.articles.forEach(article => {
+          if (article.url && !allArticleUrls.has(article.url.toLowerCase())) {
+            allArticleUrls.add(article.url.toLowerCase());
+            const isBookmarked = bookmarkedUrls.has(article.url.toLowerCase()) ? 'bookmarked' : '';
+            const card = document.createElement("div");
+            card.className = "news-card";
+            card.innerHTML = `
+              <img src="${sanitizeString(article.urlToImage) || 'https://placehold.co/400x200'}" alt="News Image" onerror="this.src='https://placehold.co/400x200';">
+              <div class="content">
+                <h3>${sanitizeString(article.title) || 'No title available'}</h3>
+                <p>${sanitizeString(article.description) || 'No description available'}</p>
+                <div class="d-flex align-items-center justify-content-between">
+                  <a href="${sanitizeString(article.url)}" target="_blank">Read more</a>
+                  <i class="fas fa-star bookmark-icon ${isBookmarked}" 
+                     data-url="${sanitizeString(article.url)}" 
+                     data-title="${sanitizeString(article.title || '')}" 
+                     data-description="${sanitizeString(article.description || '')}" 
+                     data-url-to-image="${sanitizeString(article.urlToImage || '')}"></i>
+                </div>
+              </div>
+            `;
+            newsFeed.appendChild(card);
+          }
+        });
+        loadMoreContainer.style.display = 'block';
+        if (data.articles.length < 20 || (data.totalResults && data.totalResults <= allArticleUrls.size)) {
+          newsFeed.innerHTML += `<p style="color:gray;">All available articles loaded (${data.totalResults || 'unknown'} total).</p>`;
+          loadMoreContainer.style.display = 'none';
+        }
+        if (allArticleUrls.size >= 100) {
+          newsFeed.innerHTML += `<p style="color:gray;">Maximum article limit (100) reached.</p>`;
+          loadMoreContainer.style.display = 'none';
+        }
+      } else {
+        newsFeed.innerHTML = `<p style="color:red;">Error: ${sanitizeString(data.message) || 'Failed to fetch news'}</p>`;
+        loadMoreContainer.style.display = 'none';
+        showToast(data.message || 'Failed to fetch news.', true);
+      }
+    } catch (err) {
+      console.error("Fetch news error:", err.message);
+      newsFeed.innerHTML = `<p style="color:red;">Failed to fetch news: ${sanitizeString(err.message)}</p>`;
+      loadMoreContainer.style.display = 'none';
+      showToast('Failed to fetch news.', true);
+    }
+  }
+
+  async function fetchTrending() {
+    console.log("Fetching trending news...");
+    const url = `http://localhost:8080/api/news?country=us&pageSize=5`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        let errorMessage = 'Failed to fetch trending news.';
+        if (res.status === 403) {
+          errorMessage = 'Access denied. Please check if the backend server is running and CORS is configured correctly.';
+        } else if (res.status === 429) {
+          errorMessage = 'Rate limit exceeded. Please try again later.';
+        }
+        trendingFeed.innerHTML = `<p style="color:red;">${errorMessage}</p>`;
+        showToast(errorMessage, true);
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const data = await res.json();
+      console.log(`Trending response: status=${data.status}, articles=${data.articles ? data.articles.length : 0}`);
+      trendingFeed.innerHTML = "";
+      if (data.status === "ok") {
+        const uniqueArticles = new Set([...allArticleUrls]);
+        data.articles.forEach(article => {
+          if (article.url && !uniqueArticles.has(article.url.toLowerCase())) {
+            uniqueArticles.add(article.url.toLowerCase());
+            const item = document.createElement("div");
+            item.className = "trending-item";
+            item.innerHTML = `
+              <a href="${sanitizeString(article.url)}" target="_blank">${sanitizeString(article.title) || 'No title available'}</a>
+              <p style="font-size:12px;color:var(--muted);">${sanitizeString(article.source?.name) || 'Unknown source'}</p>
+            `;
+            trendingFeed.appendChild(item);
+          }
+        });
+      } else {
+        trendingFeed.innerHTML = `<p style="color:red;">Error: ${sanitizeString(data.message) || 'Failed to fetch trending news'}</p>`;
+        showToast(data.message || 'Failed to fetch trending news.', true);
+      }
+    } catch (err) {
+      console.error("Trending fetch error:", err);
+      trendingFeed.innerHTML = `<p style="color:red;">Failed to fetch trending news. Check console for details.</p>`;
+      showToast('Failed to fetch trending news.', true);
+    }
+  }
+
+  async function toggleBookmark(icon, url, title, description, urlToImage) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      const bookmarkModal = new bootstrap.Modal(bookmarkPromptModal);
+      bookmarkModal.show();
+      return;
+    }
+
+    const normalizedUrl = url.toLowerCase();
+    const isBookmarked = icon.classList.contains('bookmarked');
+    try {
+      if (isBookmarked) {
+        const res = await fetch(`http://localhost:8080/api/bookmarks?url=${encodeURIComponent(normalizedUrl)}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          icon.classList.remove('bookmarked');
+          showToast('Bookmark removed successfully.');
+          if (isBookmarksView) fetchBookmarks();
+        } else {
+          const errorData = await res.text();
+          let errorMessage = 'Failed to remove bookmark.';
+          try {
+            const jsonError = JSON.parse(errorData);
+            errorMessage = jsonError.error || errorMessage;
+          } catch (jsonErr) {
+            console.error('Failed to parse bookmark delete error response:', jsonErr);
+          }
+          console.error('Failed to remove bookmark:', errorData);
+          showToast(errorMessage, true);
+        }
+      } else {
+        const res = await fetch('http://localhost:8080/api/bookmarks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ url: normalizedUrl, title, description, urlToImage })
+        });
+        if (res.ok) {
+          icon.classList.add('bookmarked');
+          showToast('Bookmark added successfully.');
+        } else {
+          const errorData = await res.text();
+          let errorMessage = 'Failed to add bookmark.';
+          try {
+            const jsonError = JSON.parse(errorData);
+            errorMessage = jsonError.error || errorMessage;
+          } catch (jsonErr) {
+            console.error('Failed to parse bookmark add error response:', jsonErr);
+          }
+          console.error('Failed to add bookmark:', errorData);
+          showToast(errorMessage, true);
+        }
+      }
+    } catch (err) {
+      console.error('Bookmark toggle error:', err);
+      showToast('Error connecting to server.', true);
+    }
+  }
+
+  async function fetchBookmarks() {
+    console.log("Fetching bookmarked articles...");
+    const token = localStorage.getItem('token');
+    if (!token) {
+      newsFeed.innerHTML = `<p class="text-center text-gray-500">You have not logged in yet, please <a href="#" id="loginPromptLink" class="text-blue-500 hover:underline">login</a>.</p>`;
+      loadMoreContainer.style.display = 'none';
+      const loginPromptLink = document.getElementById('loginPromptLink');
+      if (loginPromptLink) {
+        loginPromptLink.addEventListener('click', () => {
+          const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+          authModal.show();
+          loginForm.classList.remove('hidden');
+          registerForm.classList.add('hidden');
+          authTitle.textContent = 'Log In';
+          toggleAuthLink.textContent = "Don't have an account? Register";
+        });
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch('http://localhost:8080/api/bookmarks', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.text();
+        let errorMessage = 'Failed to fetch bookmarks: Please try again.';
+        try {
+          const jsonError = JSON.parse(errorData);
+          errorMessage = jsonError.message || errorMessage;
+        } catch (jsonErr) {
+          console.error('Failed to parse bookmarks error response:', jsonErr);
+        }
+        newsFeed.innerHTML = `<p style="color:red;">${sanitizeString(errorMessage)}</p>`;
+        loadMoreContainer.style.display = 'none';
+        showToast(errorMessage, true);
+        return;
+      }
+
+      const response = await res.json();
+      const data = response.bookmarks || [];
+      console.log(`Bookmarks response: articles=${data.length}`);
+      
+      newsFeed.innerHTML = '';
+      loadMoreContainer.style.display = 'none';
+
+      if (data.length === 0) {
+        newsFeed.innerHTML = `<p class="text-center text-gray-500">No bookmarked articles yet.</p>`;
+        return;
+      }
+
+      data.forEach(article => {
+        const card = document.createElement('div');
+        card.className = 'news-card';
+        card.innerHTML = `
+          <img src="${sanitizeString(article.urlToImage) || 'https://placehold.co/400x200'}" alt="News Image" onerror="this.src='https://placehold.co/400x200';">
+          <div class="content">
+            <h3>${sanitizeString(article.title) || 'No title available'}</h3>
+            <p>${sanitizeString(article.description) || 'No description available'}</p>
+            <div class="d-flex align-items-center justify-content-between">
+              <a href="${sanitizeString(article.url)}" target="_blank">Read more</a>
+              <i class="fas fa-star bookmark-icon bookmarked" 
+                 data-url="${sanitizeString(article.url)}" 
+                 data-title="${sanitizeString(article.title || '')}" 
+                 data-description="${sanitizeString(article.description || '')}" 
+                 data-url-to-image="${sanitizeString(article.urlToImage || '')}"></i>
+            </div>
+          </div>
+        `;
+        newsFeed.appendChild(card);
+      });
+    } catch (err) {
+      console.error('Fetch bookmarks error:', err);
+      newsFeed.innerHTML = `<p style="color:red;">Error fetching bookmarks. Check console for details.</p>`;
+      loadMoreContainer.style.display = 'none';
+      showToast('Error fetching bookmarks.', true);
+    }
+  }
+
+  cancelBookmarkBtn.addEventListener('click', () => {
+    bootstrap.Modal.getInstance(bookmarkPromptModal).hide();
+  });
+
+  loginBookmarkBtn.addEventListener('click', () => {
+    bootstrap.Modal.getInstance(bookmarkPromptModal).hide();
+    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+    authModal.show();
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+    authTitle.textContent = 'Log In';
+    toggleAuthLink.textContent = "Don't have an account? Register";
+  });
+
+  bookmarksLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    isBookmarksView = true;
+    fetchBookmarks();
+  });
+
+  homeLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    isBookmarksView = false;
+    currentPage = 1;
+    currentCategory = localStorage.getItem('preferredCategory') || 'general';
+    currentQuery = '';
+    allArticleUrls.clear();
+    fetchNews(currentCategory);
+  });
+
+  function loadCategory(category) {
+    isBookmarksView = false;
+    currentPage = 1;
+    currentCategory = category;
+    currentQuery = '';
+    allArticleUrls.clear();
+    fetchNews(category);
+  }
+
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const query = searchInput.value.trim();
+      isBookmarksView = false;
+      currentPage = 1;
+      currentQuery = query;
+      currentCategory = 'general';
+      allArticleUrls.clear();
+      fetchNews('general', query);
+    }
+  });
+
+  loadMoreBtn.addEventListener('click', () => {
+    currentPage++;
+    fetchNews(currentCategory, currentQuery, currentPage, true);
+  });
+
+  // Global event delegation for bookmark icons
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (target.classList.contains('bookmark-icon')) {
+      const url = target.getAttribute('data-url');
+      const title = target.getAttribute('data-title') || '';
+      const description = target.getAttribute('data-description') || '';
+      const urlToImage = target.getAttribute('data-url-to-image') || '';
+      toggleBookmark(target, url, title, description, urlToImage);
+    }
+  });
+
+  console.log(`Initial load with category: ${currentCategory}`);
+  fetchNews(currentCategory);
+  fetchTrending();
+</script>
+</body>
+</html>
