@@ -25,13 +25,13 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    // Password encoder
+    // ===================== Password Encoder =====================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Global CORS filter
+    // ===================== Global CORS Filter (optional extra layer) =====================
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsFilter corsFilter() {
@@ -42,7 +42,7 @@ public class SecurityConfig {
             "http://localhost:3000",
             "http://localhost:5500",
             "https://seshu-eazybyts-module3.onrender.com"
-        )); // Use specific origins instead of "*" for security
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -55,14 +55,30 @@ public class SecurityConfig {
         return new CorsFilter(source);
     }
 
-    // Security filter chain
+    // ===================== Security Filter Chain =====================
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        logger.info("Building security filter chain...");
+        logger.info("Building security filter chain with proper CORS handling...");
 
         http
+            // Enable CORS in Spring Security
+            .cors(cors -> cors.configurationSource(request -> {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOrigins(List.of(
+                    "http://localhost:3000",
+                    "http://localhost:5500",
+                    "https://seshu-eazybyts-module3.onrender.com"
+                ));
+                config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+                config.setAllowedHeaders(List.of("*"));
+                config.setAllowCredentials(true);
+                return config;
+            }))
+            // Disable CSRF for stateless REST APIs
             .csrf(csrf -> csrf.disable())
+            // Stateless session management
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // Authorize requests
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/news/**").permitAll()
@@ -70,20 +86,20 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             );
 
-        logger.info("Security filter chain configured");
+        logger.info("Security filter chain configured successfully");
         return http.build();
     }
 
-    // Logging filter
+    // ===================== Logging Filter for debugging =====================
     @Bean
     public Filter logRequestsFilter() {
         return (request, response, chain) -> {
             HttpServletRequest req = (HttpServletRequest) request;
             HttpServletResponse res = (HttpServletResponse) response;
 
-            logger.info("Incoming request: {} {}", req.getMethod(), req.getRequestURI());
+            logger.info("[REQUEST] {} {} from {}", req.getMethod(), req.getRequestURI(), req.getRemoteAddr());
             chain.doFilter(request, response);
-            logger.info("Response headers: {}", res.getHeaderNames());
+            logger.info("[RESPONSE] {} {} - Status: {}", req.getMethod(), req.getRequestURI(), res.getStatus());
         };
     }
 }
