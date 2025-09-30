@@ -1,5 +1,7 @@
 package com.example.newsbackend.security;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -13,11 +15,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.List;
 
@@ -26,9 +25,6 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    /**
-     * Log every incoming request and outgoing response
-     */
     @Bean
     public OncePerRequestFilter loggingFilter() {
         return new OncePerRequestFilter() {
@@ -43,48 +39,35 @@ public class SecurityConfig {
         };
     }
 
-    /**
-     * CORS configuration
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // Add allowed origins
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "http://localhost:5500",
                 "https://seshu-eazybyts-module3.onrender.com"
         ));
-
-        // Allow all HTTP methods and headers
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","HEAD"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 
-    /**
-     * Spring Security filter chain
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors()  // enable CORS
-            .and()
-            .csrf().disable() // disable CSRF for API
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+            .cors(cors -> {})  // enable CORS
+            .csrf(csrf -> csrf.disable()) // disable CSRF for APIs
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
                     .anyRequest().authenticated()
             );
 
-        logger.info("Building security filter chain with proper CORS handling...");
+        logger.info("Security filter chain built successfully");
         return http.build();
     }
 }
