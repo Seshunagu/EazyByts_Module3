@@ -38,7 +38,11 @@ public class SecurityConfig {
         logger.info("Initializing global CORS filter...");
 
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*")); // Change to frontend URL in prod
+        config.setAllowedOrigins(List.of(
+            "http://localhost:3000",
+            "http://localhost:5500",
+            "https://seshu-eazybyts-module3.onrender.com"
+        )); // Use specific origins instead of "*" for security
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -47,7 +51,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
-        logger.info("CORS filter registered for all endpoints");
+        logger.info("CORS filter registered for all endpoints with allowed origins: {}", config.getAllowedOrigins());
         return new CorsFilter(source);
     }
 
@@ -56,17 +60,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         logger.info("Building security filter chain...");
 
-        http.csrf(csrf -> csrf.disable());
-
-        // ⚡ Session management
-        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        http.authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**").permitAll()
-            .requestMatchers("/api/news/**").permitAll()
-            .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**").permitAll()
-            .anyRequest().authenticated()
-        );
+        http
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/news/**").permitAll()
+                .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**").permitAll()
+                .anyRequest().authenticated()
+            );
 
         logger.info("Security filter chain configured");
         return http.build();
