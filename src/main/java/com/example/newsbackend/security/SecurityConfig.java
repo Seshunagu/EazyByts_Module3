@@ -70,8 +70,9 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/public/**").permitAll() // Allow root and static resources
+                        .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/public/**").permitAll()
                         .anyRequest().authenticated()
                 );
 
