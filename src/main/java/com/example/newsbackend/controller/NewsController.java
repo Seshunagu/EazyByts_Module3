@@ -1,85 +1,47 @@
 package com.example.newsbackend.controller;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.Map;
 
+@CrossOrigin(origins = {
+        "http://localhost:3000",
+        "http://localhost:5500",
+        "https://seshu-eazybyts-module3.onrender.com"
+})
 @RestController
 @RequestMapping("/api/news")
 public class NewsController {
 
-    @Value("${newsapi.key}")
-    private String newsApiKey;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    // ✅ Top headlines endpoint
+    // Example: /api/news/top-headlines?country=us&category=general&pageSize=20&page=1
     @GetMapping("/top-headlines")
-    public ResponseEntity<?> getTopHeadlines(
-            @RequestParam(defaultValue = "us") String country,
-            @RequestParam(defaultValue = "general") String category,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(defaultValue = "1") int page) {
+    public ResponseEntity<?> getTopHeadlines(@RequestParam(defaultValue = "us") String country,
+                                             @RequestParam(defaultValue = "general") String category,
+                                             @RequestParam(defaultValue = "20") int pageSize,
+                                             @RequestParam(defaultValue = "1") int page) {
+        // TODO: Replace with actual service that fetches news from DB or external API
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Top headlines fetched successfully");
+        response.put("country", country);
+        response.put("category", category);
+        response.put("pageSize", pageSize);
+        response.put("page", page);
 
-        String url = String.format(
-                "https://newsapi.org/v2/top-headlines?country=%s&category=%s&pageSize=%d&page=%d&apiKey=%s",
-                country, category, pageSize, page, newsApiKey
-        );
-
-        try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            return ResponseEntity.ok(response.getBody());
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            return ResponseEntity.status(429).body(Map.of("message", "Rate limit exceeded. Try again later."));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "Failed to fetch news: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(response);
     }
 
-    // ✅ Everything endpoint
-    @GetMapping("/everything")
-    public ResponseEntity<?> getEverything(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(defaultValue = "1") int page) {
-
-        String url = String.format(
-                "https://newsapi.org/v2/everything?q=%s&pageSize=%d&page=%d&apiKey=%s",
-                q, pageSize, page, newsApiKey
-        );
-
-        try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            return ResponseEntity.ok(response.getBody());
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            return ResponseEntity.status(429).body(Map.of("message", "Rate limit exceeded. Try again later."));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "Failed to fetch news: " + e.getMessage()));
-        }
-    }
-
-    // ✅ Trending news endpoint
+    // Example: /api/news?country=us&pageSize=5   (Trending section)
     @GetMapping
-    public ResponseEntity<?> getTrending(
-            @RequestParam(defaultValue = "us") String country,
-            @RequestParam(defaultValue = "5") int pageSize) {
+    public ResponseEntity<?> getTrendingNews(@RequestParam(defaultValue = "us") String country,
+                                             @RequestParam(defaultValue = "5") int pageSize) {
+        // TODO: Replace with actual trending logic
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Trending news fetched successfully");
+        response.put("country", country);
+        response.put("pageSize", pageSize);
 
-        String url = String.format(
-                "https://newsapi.org/v2/top-headlines?country=%s&pageSize=%d&apiKey=%s",
-                country, pageSize, newsApiKey
-        );
-
-        try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            return ResponseEntity.ok(response.getBody());
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            return ResponseEntity.status(429).body(Map.of("message", "Rate limit exceeded. Try again later."));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "Failed to fetch trending news: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(response);
     }
 }
