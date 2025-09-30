@@ -64,7 +64,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
             "http://localhost:3000",
             "http://localhost:5500",
-            "https://seshu-eazybyts-module3.onrender.com"
+            "https://seshu-eazybyts-module3.onrender.com",
             "https://seshu-news-backend.onrender.com"
 
         ));
