@@ -74,7 +74,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/public/**").permitAll()
                         .anyRequest().authenticated()
-                );
+                )
+        .addFilterBefore(jwtAuthFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         logger.info("✅ Security filter chain built successfully");
         return http.build();
