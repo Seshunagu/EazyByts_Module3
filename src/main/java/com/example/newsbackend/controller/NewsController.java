@@ -8,7 +8,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 
-@CrossOrigin(origins = "https://seshu-eazybyts-module3.onrender.com") // Allow frontend origin
 @RestController
 @RequestMapping("/api/news")
 public class NewsController {
@@ -18,7 +17,7 @@ public class NewsController {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // Top headlines endpoint
+    // ✅ Top headlines endpoint
     @GetMapping("/top-headlines")
     public ResponseEntity<?> getTopHeadlines(
             @RequestParam(defaultValue = "us") String country,
@@ -41,7 +40,7 @@ public class NewsController {
         }
     }
 
-    // Everything endpoint
+    // ✅ Everything endpoint
     @GetMapping("/everything")
     public ResponseEntity<?> getEverything(
             @RequestParam String q,
@@ -63,7 +62,7 @@ public class NewsController {
         }
     }
 
-    // Trending news endpoint
+    // ✅ Trending news endpoint
     @GetMapping
     public ResponseEntity<?> getTrending(
             @RequestParam(defaultValue = "us") String country,
