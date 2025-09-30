@@ -7,14 +7,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -29,14 +31,14 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ Central CORS configuration with debug logs
+    // ✅ Global CORS filter with highest precedence
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        logger.info("Setting up CORS configuration...");
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public CorsFilter corsFilter() {
+        logger.info("Initializing global CORS filter...");
 
         CorsConfiguration config = new CorsConfiguration();
-        // Use AllowedOriginPatterns to handle exact origin mismatch in deployed apps
-        config.setAllowedOriginPatterns(List.of("*")); 
+        config.setAllowedOriginPatterns(List.of("*")); // Use exact frontend URL in production if needed
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -45,18 +47,18 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
-        logger.info("CORS configuration registered for all endpoints");
-        return source;
+        logger.info("CORS filter registered for all endpoints");
+        return new CorsFilter(source);
     }
 
-    // ✅ Security rules with logging
+    // ✅ Security rules
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         logger.info("Building security filter chain...");
 
         http
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Use our CORS bean
+            .cors() // Use the global CorsFilter
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
@@ -69,9 +71,9 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ✅ Optional filter to log requests and response headers
+    // ✅ Optional filter to log all incoming requests and response headers
     @Bean
-    public Filter logCorsFilter() {
+    public Filter logRequestsFilter() {
         return (request, response, chain) -> {
             HttpServletRequest req = (HttpServletRequest) request;
             HttpServletResponse res = (HttpServletResponse) response;
