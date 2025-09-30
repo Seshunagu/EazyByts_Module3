@@ -25,20 +25,20 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    // ✅ Password encoder
+    // Password encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ Global CORS filter with highest precedence
+    // Global CORS filter
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsFilter corsFilter() {
         logger.info("Initializing global CORS filter...");
 
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*")); // Use exact frontend URL in production if needed
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -51,27 +51,30 @@ public class SecurityConfig {
         return new CorsFilter(source);
     }
 
-    // ✅ Security rules
+    // Security filter chain
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         logger.info("Building security filter chain...");
 
         http
             .csrf(csrf -> csrf.disable())
-            .cors() // Use the global CorsFilter
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/news/**").permitAll()
-                .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**").permitAll()
-                .anyRequest().authenticated()
-            );
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()));
+
+        // ⚡ Session management must be called on HttpSecurity
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        http.authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/auth/**").permitAll()
+            .requestMatchers("/api/news/**").permitAll()
+            .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**").permitAll()
+            .anyRequest().authenticated()
+        );
 
         logger.info("Security filter chain configured");
         return http.build();
     }
 
-    // ✅ Optional filter to log all incoming requests and response headers
+    // Logging filter
     @Bean
     public Filter logRequestsFilter() {
         return (request, response, chain) -> {
