@@ -55,7 +55,7 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         config.setExposedHeaders(List.of("Access-Control-Allow-Origin", "Access-Control-Allow-Methods"));
-        config.setMaxAge(3600L); // Cache preflight response for 1 hour
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -69,9 +69,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll() // Permit all GET requests to news endpoints
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow CORS preflight requests
-                        .requestMatchers("/favicon.ico", "/static/**", "/public/**").permitAll() // Allow static resources
+                        .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/public/**").permitAll() // Allow root and static resources
                         .anyRequest().authenticated()
                 );
 
