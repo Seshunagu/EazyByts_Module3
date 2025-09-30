@@ -16,21 +16,21 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    // ✅ Encode passwords for custom users / JWT
+    // ✅ Use BCrypt for encoding
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ Define CORS rules (for frontend URLs)
+    // ✅ Global CORS filter
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-                "http://localhost:3000",    // React dev
-                "http://localhost:5500",    // Local HTML/JS
-                "https://seshu-eazybyts-module3.onrender.com" // Your deployed frontend
+                "http://localhost:3000",
+                "http://localhost:5500",
+                "https://seshu-eazybyts-module3.onrender.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
@@ -40,15 +40,16 @@ public class SecurityConfig {
         return new CorsFilter(source);
     }
 
-    // ✅ Remove default user/password login, allow JWT/auth endpoints
+    // ✅ Remove default login form & password
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> {}) // use our CorsFilter bean
+            .cors(cors -> {}) // use our CorsFilter
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // allow login/register
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/news/**").permitAll() // <--- Allow public news API
                 .anyRequest().authenticated()
             );
 
