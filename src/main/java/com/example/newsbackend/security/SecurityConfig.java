@@ -32,9 +32,11 @@ public class SecurityConfig {
             protected void doFilterInternal(HttpServletRequest request,
                                             HttpServletResponse response,
                                             FilterChain filterChain) throws ServletException, IOException {
-                logger.info("[REQUEST] {} {} from {}", request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
+                logger.info("[REQUEST] " + request.getMethod() + " " + request.getRequestURI() +
+                        " from " + request.getRemoteAddr());
                 filterChain.doFilter(request, response);
-                logger.info("[RESPONSE] {} {} - Status: {}", request.getMethod(), request.getRequestURI(), response.getStatus());
+                logger.info("[RESPONSE] " + request.getMethod() + " " + request.getRequestURI() +
+                        " - Status: " + response.getStatus());
             }
         };
     }
@@ -47,7 +49,7 @@ public class SecurityConfig {
                 "http://localhost:5500",
                 "https://seshu-eazybyts-module3.onrender.com"
         ));
-        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","HEAD"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
@@ -59,15 +61,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> {})  // enable CORS
-            .csrf(csrf -> csrf.disable()) // disable CSRF for APIs
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ explicitly hook CORS config
+            .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
                     .anyRequest().authenticated()
             );
 
-        logger.info("Security filter chain built successfully");
+        logger.info("✅ Security filter chain built successfully");
         return http.build();
     }
 }
