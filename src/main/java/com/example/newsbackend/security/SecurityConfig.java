@@ -40,7 +40,7 @@ public class SecurityConfig {
         return new CorsFilter(source);
     }
 
-    // ✅ Remove default login form & password
+    // ✅ Security rules
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -48,8 +48,12 @@ public class SecurityConfig {
             .cors(cors -> {}) // use our CorsFilter
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/news/**").permitAll() // <--- Allow public news API
+                .requestMatchers("/api/news/**").permitAll()
+                .requestMatchers("/", "/index.html", "/favicon.ico").permitAll() // ✅ allow root + static files
+
+                // Everything else requires authentication
                 .anyRequest().authenticated()
             );
 
