@@ -108,24 +108,22 @@ public class BookmarkController {
     }
 
     // Utility: get user from JWT token
-    private User getUserFromRequest(HttpServletRequest request) {
-        try {
-            String header = request.getHeader("Authorization");
-            if (header == null || !header.startsWith("Bearer ")) {
-                return null;
-            }
-
-            String token = header.substring(7);
-            if (!jwtUtil.validateJwtToken(token)) {
-                return null;
-            }
-
-            Long userId = jwtUtil.getUserIdFromJwt(token);
-            return userRepository.findById(userId).orElse(null);
-        } catch (Exception e) {
-            return null;
-        }
+  private User getUserFromRequest(HttpServletRequest request) {
+    String header = request.getHeader("Authorization");
+    if (header == null || !header.startsWith("Bearer ")) {
+        throw new RuntimeException("Missing or invalid Authorization header");
     }
+
+    String token = header.substring(7);
+    if (!jwtUtil.validateJwtToken(token)) {
+        throw new RuntimeException("Invalid or expired token");
+    }
+
+    Long userId = jwtUtil.getUserIdFromJwt(token);
+    return userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+}
+
 
     // DTO for request
     public static class BookmarkRequest {
