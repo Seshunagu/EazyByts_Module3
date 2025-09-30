@@ -67,15 +67,15 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
-                    .anyRequest().authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
+                .requestMatchers("/", "/index.html", "/static/**", "/assets/**").permitAll() // Allow root and static resources
+                .anyRequest().authenticated()
             );
 
         logger.info("✅ Security filter chain built successfully");
         return http.build();
     }
 
-    // 🔑 Add PasswordEncoder bean so AuthService can inject it
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
