@@ -1,47 +1,96 @@
 package com.example.newsbackend.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.Map;
-
-@CrossOrigin(origins = {
-        "http://localhost:3000",
-        "http://localhost:5500",
-        "https://seshu-eazybyts-module3.onrender.com"
-})
 @RestController
 @RequestMapping("/api/news")
 public class NewsController {
 
-    // Example: /api/news/top-headlines?country=us&category=general&pageSize=20&page=1
-    @GetMapping("/top-headlines")
-    public ResponseEntity<?> getTopHeadlines(@RequestParam(defaultValue = "us") String country,
-                                             @RequestParam(defaultValue = "general") String category,
-                                             @RequestParam(defaultValue = "20") int pageSize,
-                                             @RequestParam(defaultValue = "1") int page) {
-        // TODO: Replace with actual service that fetches news from DB or external API
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Top headlines fetched successfully");
-        response.put("country", country);
-        response.put("category", category);
-        response.put("pageSize", pageSize);
-        response.put("page", page);
+    private static final Logger logger = LoggerFactory.getLogger(NewsController.class);
 
-        return ResponseEntity.ok(response);
+    @Value("${newsapi.key}")
+    private String apiKey;
+
+    private final RestTemplate restTemplate;
+
+    public NewsController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
-    // Example: /api/news?country=us&pageSize=5   (Trending section)
-    @GetMapping
-    public ResponseEntity<?> getTrendingNews(@RequestParam(defaultValue = "us") String country,
-                                             @RequestParam(defaultValue = "5") int pageSize) {
-        // TODO: Replace with actual trending logic
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Trending news fetched successfully");
-        response.put("country", country);
-        response.put("pageSize", pageSize);
+    @GetMapping("/top-headlines")
+    public ResponseEntity<?> getTopHeadlines(
+            @RequestParam(defaultValue = "us") String country,
+            @RequestParam(defaultValue = "general") String category,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(defaultValue = "1") int page) {
+        try {
+            String url = String.format(
+                "https://newsapi.org/v2/top-headlines?country=%s&category=%s&pageSize=%d&page=%d&apiKey=%s",
+                country, category, pageSize, page, apiKey);
+            logger.info("Fetching NewsAPI: {}", url);
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            logger.info("NewsAPI response: status={}, articles={}", 
+                response.getBody().get("status"), 
+                ((List<?>) response.getBody().getOrDefault("articles", Collections.emptyList())).size());
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Failed to fetch top headlines: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Failed to fetch news",
+                "message", e.getMessage()
+            ));
+        }
+    }
 
-        return ResponseEntity.ok(response);
+    @GetMapping
+    public ResponseEntity<?> getNews(
+            @RequestParam(defaultValue = "us") String country,
+            @RequestParam(defaultValue = "5") int pageSize) {
+        try {
+            String url = String.format(
+                "https://newsapi.org/v2/top-headlines?country=%s&pageSize=%d&apiKey=%s",
+                country, pageSize, apiKey);
+            logger.info("Fetching NewsAPI: {}", url);
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            logger.info("NewsAPI response: status={}, articles={}", 
+                response.getBody().get("status"), 
+                ((List<?>) response.getBody().getOrDefault("articles", Collections.emptyList())).size());
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Failed to fetch news: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Failed to fetch news",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/everything")
+    public ResponseEntity<?> getEverything(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(defaultValue = "1") int page) {
+        try {
+            String url = String.format(
+                "https://newsapi.org/v2/everything?q=%s&pageSize=%d&page=%d&apiKey=%s",
+                URLEncoder.encode(q, StandardCharsets.UTF_8), pageSize, page, apiKey);
+            logger.info("Fetching NewsAPI: {}", url);
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            logger.info("NewsAPI response: status={}, articles={}", 
+                response.getBody().get("status"), 
+                ((List<?>) response.getBody().getOrDefault("articles", Collections.emptyList())).size());
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Failed to fetch everything: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Failed to fetch news",
+                "message", e.getMessage()
+            ));
+        }
     }
 }
