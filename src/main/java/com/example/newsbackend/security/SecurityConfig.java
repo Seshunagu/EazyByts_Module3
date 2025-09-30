@@ -65,6 +65,8 @@ public class SecurityConfig {
             "http://localhost:3000",
             "http://localhost:5500",
             "https://seshu-eazybyts-module3.onrender.com"
+            "https://seshu-news-backend.onrender.com"
+
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*")); // Allow all headers
