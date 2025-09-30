@@ -25,15 +25,16 @@ public class AuthController {
             String username = body.get("username");
             String email = body.get("email");
             String password = body.get("password");
-            if (username == null || email == null || password == null) {
-                return ResponseEntity.badRequest().body(Map.of("message","Missing fields"));
+            String preferredCategory = body.get("preferredCategory");
+            if (username == null || email == null || password == null || preferredCategory == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
             }
-            User saved = authService.register(username, email, password);
-            return ResponseEntity.ok(Map.of("message","Registration successful", "username", saved.getUsername()));
+            User saved = authService.register(username, email, password, preferredCategory);
+            return ResponseEntity.ok(Map.of("message", "Registration successful", "username", saved.getUsername()));
         } catch (RuntimeException ex) {
-            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         } catch (Exception ex) {
-            return ResponseEntity.status(500).body(Map.of("message", "Server error"));
+            return ResponseEntity.status(500).body(Map.of("error", "Server error: " + ex.getMessage()));
         }
     }
 
@@ -42,15 +43,15 @@ public class AuthController {
         String email = body.get("email");
         String password = body.get("password");
         if (email == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("message","Missing fields"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
         }
         var opt = authService.authenticate(email, password);
         if (opt.isPresent()) {
             User u = opt.get();
-            String token = jwtUtil.generateToken(u.getEmail(), u.getId()); // subject stored as email
-            return ResponseEntity.ok(Map.of("token", token, "username", u.getUsername()));
+            String token = jwtUtil.generateToken(u.getEmail(), u.getId());
+            return ResponseEntity.ok(Map.of("token", token, "username", u.getUsername(), "preferredCategory", u.getPreferredCategory()));
         } else {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
     }
 }
