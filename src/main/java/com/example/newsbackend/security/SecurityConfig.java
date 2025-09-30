@@ -1,23 +1,24 @@
 package com.example.newsbackend.security;
 
-import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import java.io.IOException;
 import java.util.List;
 
 @Configuration
@@ -25,81 +26,65 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    // ===================== Password Encoder =====================
+    /**
+     * Log every incoming request and outgoing response
+     */
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public OncePerRequestFilter loggingFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request,
+                                            HttpServletResponse response,
+                                            FilterChain filterChain) throws ServletException, IOException {
+                logger.info("[REQUEST] {} {} from {}", request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
+                filterChain.doFilter(request, response);
+                logger.info("[RESPONSE] {} {} - Status: {}", request.getMethod(), request.getRequestURI(), response.getStatus());
+            }
+        };
     }
 
-    // ===================== Global CORS Filter (optional extra layer) =====================
+    /**
+     * CORS configuration
+     */
     @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE)
-    public CorsFilter corsFilter() {
-        logger.info("Initializing global CORS filter...");
-
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
+
+        // Add allowed origins
         config.setAllowedOrigins(List.of(
-            "http://localhost:3000",
-            "http://localhost:5500",
-            "https://seshu-eazybyts-module3.onrender.com"
+                "http://localhost:3000",
+                "http://localhost:5500",
+                "https://seshu-eazybyts-module3.onrender.com"
         ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // Allow all HTTP methods and headers
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
-        logger.info("CORS filter registered for all endpoints with allowed origins: {}", config.getAllowedOrigins());
-        return new CorsFilter(source);
+        return source;
     }
 
-    // ===================== Security Filter Chain =====================
+    /**
+     * Spring Security filter chain
+     */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        logger.info("Building security filter chain with proper CORS handling...");
-
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Enable CORS in Spring Security
-            .cors(cors -> cors.configurationSource(request -> {
-                CorsConfiguration config = new CorsConfiguration();
-                config.setAllowedOrigins(List.of(
-                    "http://localhost:3000",
-                    "http://localhost:5500",
-                    "https://seshu-eazybyts-module3.onrender.com"
-                ));
-                config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-                config.setAllowedHeaders(List.of("*"));
-                config.setAllowCredentials(true);
-                return config;
-            }))
-            // Disable CSRF for stateless REST APIs
-            .csrf(csrf -> csrf.disable())
-            // Stateless session management
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // Authorize requests
+            .cors()  // enable CORS
+            .and()
+            .csrf().disable() // disable CSRF for API
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .and()
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/news/**").permitAll()
-                .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**").permitAll()
-                .anyRequest().authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
+                    .anyRequest().authenticated()
             );
 
-        logger.info("Security filter chain configured successfully");
+        logger.info("Building security filter chain with proper CORS handling...");
         return http.build();
-    }
-
-    // ===================== Logging Filter for debugging =====================
-    @Bean
-    public Filter logRequestsFilter() {
-        return (request, response, chain) -> {
-            HttpServletRequest req = (HttpServletRequest) request;
-            HttpServletResponse res = (HttpServletResponse) response;
-
-            logger.info("[REQUEST] {} {} from {}", req.getMethod(), req.getRequestURI(), req.getRemoteAddr());
-            chain.doFilter(request, response);
-            logger.info("[RESPONSE] {} {} - Status: {}", req.getMethod(), req.getRequestURI(), res.getStatus());
-        };
     }
 }
