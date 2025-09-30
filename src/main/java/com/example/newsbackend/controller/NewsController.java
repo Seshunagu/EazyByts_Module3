@@ -1,72 +1,57 @@
 package com.example.newsbackend.controller;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import com.example.newsbackend.model.User;
+import com.example.newsbackend.security.JwtUtil;
+import com.example.newsbackend.service.AuthService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
-
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/news")
-public class NewsController {
+@RequestMapping("/api/auth")
+public class AuthController {
 
-    @Value("${newsapi.key}")
-    private String newsApiKey;
+    private final AuthService authService;
+    private final JwtUtil jwtUtil;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    public AuthController(AuthService authService, JwtUtil jwtUtil) {
+        this.authService = authService;
+        this.jwtUtil = jwtUtil;
+    }
 
-    @GetMapping("/top-headlines")
-    public ResponseEntity<?> getTopHeadlines(
-            @RequestParam(defaultValue = "general") String category,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(defaultValue = "1") int page) {
-        String url = String.format("https://newsapi.org/v2/top-headlines?category=%s&pageSize=%d&page=%d&apiKey=%s",
-                category, pageSize, page, newsApiKey);
-
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
         try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            return ResponseEntity.ok(response.getBody());
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            return ResponseEntity.status(429).body(Map.of("message", "Rate limit exceeded. Try again later."));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "Failed to fetch news: " + e.getMessage()));
+            String username = body.get("username");
+            String email = body.get("email");
+            String password = body.get("password");
+            String preferredCategory = body.get("preferredCategory");
+            if (username == null || email == null || password == null || preferredCategory == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
+            }
+            User saved = authService.register(username, email, password, preferredCategory);
+            return ResponseEntity.ok(Map.of("message", "Registration successful", "username", saved.getUsername()));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("error", "Server error: " + ex.getMessage()));
         }
     }
 
-    @GetMapping("/everything")
-    public ResponseEntity<?> getEverything(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(defaultValue = "1") int page) {
-        String url = String.format("https://newsapi.org/v2/everything?q=%s&pageSize=%d&page=%d&apiKey=%s",
-                q, pageSize, page, newsApiKey);
-
-        try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            return ResponseEntity.ok(response.getBody());
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            return ResponseEntity.status(429).body(Map.of("message", "Rate limit exceeded. Try again later."));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "Failed to fetch news: " + e.getMessage()));
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String password = body.get("password");
+        if (email == null || password == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
         }
-    }
-
-    @GetMapping
-    public ResponseEntity<?> getTrending(
-            @RequestParam(defaultValue = "us") String country,
-            @RequestParam(defaultValue = "5") int pageSize) {
-        String url = String.format("https://newsapi.org/v2/top-headlines?country=%s&pageSize=%d&apiKey=%s",
-                country, pageSize, newsApiKey);
-
-        try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            return ResponseEntity.ok(response.getBody());
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            return ResponseEntity.status(429).body(Map.of("message", "Rate limit exceeded. Try again later."));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "Failed to fetch trending news: " + e.getMessage()));
+        var opt = authService.authenticate(email, password);
+        if (opt.isPresent()) {
+            User u = opt.get();
+            String token = jwtUtil.generateToken(u.getEmail(), u.getId());
+            return ResponseEntity.ok(Map.of("token", token, "username", u.getUsername(), "preferredCategory", u.getPreferredCategory()));
+        } else {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
     }
 }
