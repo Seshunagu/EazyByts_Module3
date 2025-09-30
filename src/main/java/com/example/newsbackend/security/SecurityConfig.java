@@ -1,5 +1,8 @@
 package com.example.newsbackend.security;
 
+import jakarta.servlet.Filter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -29,14 +32,11 @@ public class SecurityConfig {
     // ✅ Central CORS configuration with debug logs
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        logger.info("Setting up CORS configuration..."); // Step 1: CORS bean is created
+        logger.info("Setting up CORS configuration...");
 
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:5500",
-                "https://seshu-eazybyts-module3.onrender.com"
-        ));
+        // Use AllowedOriginPatterns to handle exact origin mismatch in deployed apps
+        config.setAllowedOriginPatterns(List.of("*")); 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -45,27 +45,40 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
-        logger.info("CORS configuration registered for all endpoints"); // Step 2: Config registered
+        logger.info("CORS configuration registered for all endpoints");
         return source;
     }
 
     // ✅ Security rules with logging
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        logger.info("Building security filter chain..."); // Step 3: filterChain is building
+        logger.info("Building security filter chain...");
 
         http
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Step 4: Use our CORS bean
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Use our CORS bean
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/news/**").permitAll()
-                .requestMatchers("/", "/index.html", "/favicon.ico").permitAll()
+                .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**").permitAll()
                 .anyRequest().authenticated()
             );
 
-        logger.info("Security filter chain configured"); // Step 5: filterChain configured
+        logger.info("Security filter chain configured");
         return http.build();
+    }
+
+    // ✅ Optional filter to log requests and response headers
+    @Bean
+    public Filter logCorsFilter() {
+        return (request, response, chain) -> {
+            HttpServletRequest req = (HttpServletRequest) request;
+            HttpServletResponse res = (HttpServletResponse) response;
+
+            logger.info("Incoming request: {} {}", req.getMethod(), req.getRequestURI());
+            chain.doFilter(request, response);
+            logger.info("Response headers: {}", res.getHeaderNames());
+        };
     }
 }
